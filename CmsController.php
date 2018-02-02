@@ -34,9 +34,9 @@ class CmsController extends Controller
         $searchModel = new WhiteLabelPageSearch();
         $dataProvider = $searchModel->search($getParams);
 
-        $this->view->title = Yii::t('app','Quote Page CMS');
+        $this->view->title = Yii::t('app', 'Quote Page CMS');
 
-        return $this->render('index',[
+        return $this->render('index', [
             'dataProvider' => $dataProvider,
             'searchModel' => $searchModel
         ]);
@@ -54,7 +54,7 @@ class CmsController extends Controller
         $modelAccountInfo = new AccountInfo();
         $modelAccountPolicies = new AccountPolicies();
 
-        if(!empty($post)){
+        if (!empty($post)) {
             $validate = false;
 
             if ($model->load($post)) {
@@ -69,58 +69,58 @@ class CmsController extends Controller
                 }
 
                 if ($modelAccountInfo->load($post) && $modelAccountInfo->validate()
-                    && $modelAccountPolicies->load($post) && $modelAccountPolicies->validate())
-                {
+                    && $modelAccountPolicies->load($post) && $modelAccountPolicies->validate()
+                ) {
                     $validate = true;
                 }
 
             }
 
-            if($model->validate() && $validate){
+            if ($model->validate() && $validate) {
 
                 $transaction = Yii::$app->db->beginTransaction();
 
                 try {
 
-                    if(!empty($model->imageLogo)){
-                        $saveLogo = FileUploadHelper::saveImage($model->imageLogo,$oldId=null);
+                    if (!empty($model->imageLogo)) {
+                        $saveLogo = FileUploadHelper::saveImage($model->imageLogo, $oldId = null);
                         $model->logo_id = $saveLogo;
                         $model->imageLogo = null;
                     }
 
-                    if(!empty($model->imagePrimary)){
-                        $savePrimary = FileUploadHelper::saveImage($model->imagePrimary,$oldId=null);
+                    if (!empty($model->imagePrimary)) {
+                        $savePrimary = FileUploadHelper::saveImage($model->imagePrimary, $oldId = null);
                         $model->primary_image_id = $savePrimary;
                         $model->imagePrimary = null;
                     }
 
-                    if(!$model->save()){
-                        throw new Exception(Yii::t('app','Error during page saving'));
+                    if (!$model->save()) {
+                        throw new Exception(Yii::t('app', 'Error during page saving'));
                     }
 
-                    if(!$modelAccountInfo->save()){
-                        throw new Exception(Yii::t('app','Error during account info updating'));
+                    if (!$modelAccountInfo->save()) {
+                        throw new Exception(Yii::t('app', 'Error during account info updating'));
                     }
 
-                    if($modelAccountPolicies && !$modelAccountPolicies->save()){
-                        throw new Exception(Yii::t('app','Error during account policies updating'));
+                    if ($modelAccountPolicies && !$modelAccountPolicies->save()) {
+                        throw new Exception(Yii::t('app', 'Error during account policies updating'));
                     }
 
                     $transaction->commit();
 
-                    Yii::$app->session->setFlash('success', Yii::t('app','Page created successfully.'));
+                    Yii::$app->session->setFlash('success', Yii::t('app', 'Page created successfully.'));
 
                     return $this->redirect('index');
-                } catch (Exception $e){
+                } catch (Exception $e) {
                     Yii::error($e->getMessage(), __METHOD__);
                     $transaction->rollBack();
-                    Yii::$app->session->setFlash('error', Yii::t('app',$e->getMessage()));
+                    Yii::$app->session->setFlash('error', Yii::t('app', $e->getMessage()));
                 }
 
             }
         }
 
-        return $this->render('create',[
+        return $this->render('create', [
             'model' => $model,
             'serviceTypes' => $serviceTypes,
             'modelAccountInfo' => $modelAccountInfo,
@@ -146,8 +146,7 @@ class CmsController extends Controller
             $command = $query->createCommand();
             $data = $command->queryAll();
             $out['results'] = array_values($data);
-        }
-        elseif ($id > 0) {
+        } elseif ($id > 0) {
             $out['results'] = ['id' => $id, 'text' => Account::findOne($id)->username];
         }
         return $out;
@@ -164,8 +163,10 @@ class CmsController extends Controller
                 $modelAccountInfo = AccountInfo::findOne(Yii::$app->request->post('account_id'));
                 $modelAccountPolicies = AccountPolicies::findOne(Yii::$app->request->post('account_id'));
 
-                return $this->renderAjax('add-account-info-data', ['modelAccountInfo' => $modelAccountInfo,
-                    'modelAccountPolicies' => $modelAccountPolicies, 'form' => new ActiveForm()]);
+                return $this->renderAjax('add-account-info-data', [
+                    'modelAccountInfo' => $modelAccountInfo,
+                    'modelAccountPolicies' => $modelAccountPolicies, 'form' => new ActiveForm()
+                ]);
             }
         }
 
@@ -186,59 +187,59 @@ class CmsController extends Controller
         $serviceTypes = ServiceType::find()->asArray()->all();
 
 
-        if(!empty($post)){
+        if (!empty($post)) {
             if ($model->load($post) && $modelAccountInfo->load($post) && $modelAccountPolicies->load($post)) {
 
                 $model->imageLogo = UploadedFile::getInstance($model, 'imageLogo');
                 $model->imagePrimary = UploadedFile::getInstance($model, 'imagePrimary');
 
-                if($model->validate() && $modelAccountInfo->validate() && $modelAccountPolicies->validate()){
+                if ($model->validate() && $modelAccountInfo->validate() && $modelAccountPolicies->validate()) {
                     $transaction = Yii::$app->db->beginTransaction();
                     try {
 
-                        if(!$modelAccountInfo->save()){
-                            throw new Exception(Yii::t('app','Error during account info saving'));
+                        if (!$modelAccountInfo->save()) {
+                            throw new Exception(Yii::t('app', 'Error during account info saving'));
                         }
 
-                        if(!$modelAccountPolicies->save()){
-                            throw new Exception(Yii::t('app','Error during account policies saving'));
+                        if (!$modelAccountPolicies->save()) {
+                            throw new Exception(Yii::t('app', 'Error during account policies saving'));
                         }
 
-                        if(!empty($model->imageLogo)){
+                        if (!empty($model->imageLogo)) {
                             $oldId = !empty($model->logo_id) ? $model->logo_id : null;
                             $saveLogo = FileUploadHelper::saveImage($model->imageLogo, $oldId);
                             $model->logo_id = $saveLogo;
                             $model->imageLogo = null;
                         }
 
-                        if(!empty($model->imagePrimary)){
+                        if (!empty($model->imagePrimary)) {
                             $oldId = !empty($model->primary_image_id) ? $model->primary_image_id : null;
                             $savePrimary = FileUploadHelper::saveImage($model->imagePrimary, $oldId);
                             $model->primary_image_id = $savePrimary;
                             $model->imagePrimary = null;
                         }
 
-                        if(!$model->save()){
-                            throw new Exception(Yii::t('app','Error during page saving'));
+                        if (!$model->save()) {
+                            throw new Exception(Yii::t('app', 'Error during page saving'));
                         }
 
                         $transaction->commit();
 
-                        Yii::$app->session->setFlash('success', Yii::t('app','Page updated successfully.'));
+                        Yii::$app->session->setFlash('success', Yii::t('app', 'Page updated successfully.'));
 
                         return $this->redirect(Yii::$app->request->referrer);
 
-                    } catch (Exception $e){
+                    } catch (Exception $e) {
                         Yii::error($e->getMessage(), __METHOD__);
                         $transaction->rollBack();
-                        Yii::$app->session->setFlash('error', Yii::t('app',$e->getMessage()));
+                        Yii::$app->session->setFlash('error', Yii::t('app', $e->getMessage()));
                     }
                 }
             }
 
         }
 
-        return $this->render('edit',[
+        return $this->render('edit', [
             'model' => $model,
             'modelAccountInfo' => $modelAccountInfo,
             'modelAccountPolicies' => $modelAccountPolicies,

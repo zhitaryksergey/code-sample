@@ -1,4 +1,5 @@
 <?php
+
 namespace common\components;
 
 use Carbon\Carbon;
@@ -8,8 +9,8 @@ use common\models\InvoiceLine;
 use common\models\PaymentMethod;
 use common\models\SubscriptionPendingCancel;
 use common\models\SubscriptionPendingDowngrade;
-use yii\base\Component;
 use Yii;
+use yii\base\Component;
 
 /**
  * Class RenewalService
@@ -27,22 +28,27 @@ class RenewalService extends Component
         $customer = Customer::findOne($customerId);
         $subscriptions = CustomerPlans::find()->with('subscription')->where(['id' => $subscriptionIds])->all();
         $pendingCancelIds = from(
-                SubscriptionPendingCancel::find()
-                    ->select(['customer_plans_id'])
-                    ->where(['customer_plans_id' => $subscriptionIds])
-                    ->all()
-            )->select(function ($v) { return $v->customer_plans_id; })->toList();
+            SubscriptionPendingCancel::find()
+                ->select(['customer_plans_id'])
+                ->where(['customer_plans_id' => $subscriptionIds])
+                ->all()
+        )->select(function ($v) {
+            return $v->customer_plans_id;
+        })->toList();
 
         $subsToCancel = from($subscriptions)
-            ->where(function($v) use($pendingCancelIds) { return in_array($v->id, $pendingCancelIds); });
+            ->where(function ($v) use ($pendingCancelIds) {
+                return in_array($v->id, $pendingCancelIds);
+            });
 
-        foreach ($subsToCancel as $sub)
-        {
+        foreach ($subsToCancel as $sub) {
             Yii::$app->cancelService->cancelSubscription($sub);
         }
 
-        $activeSubs = from($subscriptions)->where(function ($v) { return $v->status = CustomerPlans::STATUS_ACTIVE; })->toList();
-        if(count($activeSubs) == 0) {
+        $activeSubs = from($subscriptions)->where(function ($v) {
+            return $v->status = CustomerPlans::STATUS_ACTIVE;
+        })->toList();
+        if (count($activeSubs) == 0) {
             return;
         }
 
@@ -52,9 +58,8 @@ class RenewalService extends Component
                 ->indexBy('customer_plans_id')
                 ->all();
 
-        foreach ($activeSubs as $sub)
-        {
-            if(array_key_exists($sub->id, $pendingDowngrade)) {
+        foreach ($activeSubs as $sub) {
+            if (array_key_exists($sub->id, $pendingDowngrade)) {
                 $downgrade = $pendingDowngrade[$sub->id];
                 $sub->rate = $downgrade->price;
                 $sub->plan_id = $downgrade->new_plan_id;
@@ -67,8 +72,7 @@ class RenewalService extends Component
         }
 
         $invoiceLines = [];
-        foreach ($activeSubs as $sub)
-        {
+        foreach ($activeSubs as $sub) {
             $line = new InvoiceLine();
             $line->customer_plans_ID = $sub->id;
             $line->cost = $sub->rate;
@@ -83,14 +87,13 @@ class RenewalService extends Component
             'incomplete'
         );
 
-        foreach ($activeSubs as $sub)
-        {
+        foreach ($activeSubs as $sub) {
             $sub->updateBillDates();
         }
 
-        if($invoice->state == 'paid') {
+        if ($invoice->state == 'paid') {
             $this->sendActive($activeSubs);
-        } else if(!PaymentMethod::isCheckOrCash($paymentMethodId)) {
+        } else if (!PaymentMethod::isCheckOrCash($paymentMethodId)) {
             foreach ($invoiceLines as $invoiceLine) {
                 $invoiceLine->customerPlans->status = CustomerPlans::STATUS_BILLING_SUSPEND;
                 $invoiceLine->customerPlans->save(false);
@@ -105,14 +108,21 @@ class RenewalService extends Component
             return $k;
         })->toList();
 
-        foreach ($intervals as $interval)
-        {
+        foreach ($intervals as $interval) {
             $customerTerm = $customer->termByInterval($interval);
-            if($customerTerm != null && Carbon::parse($customerTerm)->isToday()) {
+            if ($customerTerm != null && Carbon::parse($customerTerm)->isToday()) {
                 $customer->updateTermByInterval($interval, Carbon::now()->addSeconds($interval)->toDateString());
             }
         }
 
+    }
+
+    /**
+     * @param $customerPlans
+     */
+    private function sendDowngrade($customerPlans)
+    {
+        Yii::$app->callbackSenderService->sendDowngrade($customerPlans);
     }
 
     /**
@@ -137,14 +147,6 @@ class RenewalService extends Component
         })->toArray();
 
         Yii::$app->callbackSenderService->sendSuspend($deviceIds);
-    }
-
-    /**
-     * @param $customerPlans
-     */
-    private function sendDowngrade($customerPlans)
-    {
-        Yii::$app->callbackSenderService->sendDowngrade($customerPlans);
     }
 
 }
